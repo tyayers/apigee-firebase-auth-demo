@@ -1,0 +1,102 @@
+name: FirebaseAuthProxy
+displayName: ""
+type: proxy
+categories: []
+description: FirebaseAuthProxy
+documentation: ""
+parameters: []
+endpoints:
+  - name: default
+    basePath: /firebaseauthdemo
+    routes:
+      - name: default
+        target: default
+    flows:
+      - name: PreFlow
+        mode: Request
+        steps:
+          - name: EV-ExtractToken
+          - name: JWT-VerifyToken
+    faultRules: []
+targets:
+  - name: default
+    url: https://ash-speed.hetzner.com/100MB.bin
+    flows:
+      - name: PostFlow
+        mode: Response
+        steps:
+          - name: EV-ExtractSize
+    faultRules: []
+    httpTargetConnection:
+      url: https://ash-speed.hetzner.com/100MB.bin
+      properties:
+        property:
+          metadata:
+            name: response.streaming.enabled
+          value: "true"
+policies:
+  - name: EV-ExtractSize
+    type: ExtractVariables
+    content:
+      extractVariables:
+        metadata:
+          continueOnError: "false"
+          enabled: "true"
+          name: EV-ExtractSize
+        displayName: EV-ExtractSize
+        properties: {}
+        header:
+          metadata:
+            name: Content-Length
+          pattern:
+            metadata:
+              ignoreCase: "true"
+            value: "{size}"
+        ignoreUnresolvedVariables: "true"
+        source:
+          metadata:
+            clearPayload: "false"
+          value: response
+        variablePrefix: payload
+  - name: EV-ExtractToken
+    type: ExtractVariables
+    content:
+      extractVariables:
+        metadata:
+          continueOnError: "false"
+          enabled: "true"
+          name: EV-ExtractToken
+        displayName: EV-ExtractToken
+        source:
+          metadata:
+            clearPayload: "false"
+          value: request
+        variablePrefix: auth
+        ignoreUnresolvedVariables: "true"
+        header:
+          metadata:
+            name: Authorization
+          pattern:
+            metadata:
+              ignoreCase: "false"
+            value: Bearer {idToken}
+  - name: JWT-VerifyToken
+    type: VerifyJWT
+    content:
+      verifyJwt:
+        metadata:
+          continueOnError: "false"
+          enabled: "true"
+          name: JWT-VerifyToken
+        displayName: JWT-VerifyToken
+        algorithm: RS256
+        source: auth.idToken
+        ignoreUnresolvedVariables: "false"
+        publicKey:
+          jwks:
+            metadata:
+              uri: https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com
+        issuer: https://securetoken.google.com/apigee-klab1
+        audience: apigee-klab1
+resources: []
+tests: []
